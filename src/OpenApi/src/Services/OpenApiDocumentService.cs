@@ -662,7 +662,7 @@ internal sealed class OpenApiDocumentService(
                     }
                     else
                     {
-                        if (isComplexType !isEnumerableType)
+                        if (isComplexType && !isEnumerableType)
                         {
                             complexTypeSchema = parameterSchema;
                         }
