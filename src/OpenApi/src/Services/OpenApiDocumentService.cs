@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
+using System.Collections;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
@@ -630,11 +631,13 @@ internal sealed class OpenApiDocumentService(
                         .OfType<IParameterBindingMetadata>()
                         .SingleOrDefault(parameter => parameter.Name == description.Name)?
                         .HasTryParse == false;
+
+                    var isEnumerableType = IsEnumerable(description.Type);
                     if (hasMultipleFormParameters)
                     {
                         // Here and below: POCOs do not need to be need under their parameter name in the grouping.
                         // The form-binding implementation will capture them implicitly.
-                        if (isComplexType)
+                        if (isComplexType && !isEnumerableType)
                         {
                             schema.AllOf ??= [];
                             schema.AllOf.Add(parameterSchema);
@@ -659,7 +662,7 @@ internal sealed class OpenApiDocumentService(
                     }
                     else
                     {
-                        if (isComplexType)
+                        if (isComplexType !isEnumerableType)
                         {
                             complexTypeSchema = parameterSchema;
                         }
@@ -803,5 +806,21 @@ internal sealed class OpenApiDocumentService(
     {
         cancellationToken.ThrowIfCancellationRequested();
         return GetOpenApiDocumentAsync(serviceProvider, httpRequest: null, cancellationToken);
+    }
+
+    /// <remarks>
+    /// This method determines if the parameter type
+    /// is of type IEnumerable. Strings can be falsely
+    /// flagged as enumerable, so we can exclude strings
+    /// from returning true
+    /// </remarks>
+    private static bool IsEnumerable(Type type)
+    {
+        if (type == typeof(string))
+        {
+            return false;
+        }
+
+        return typeof(IEnumerable).IsAssignableFrom(type);
     }
 }
